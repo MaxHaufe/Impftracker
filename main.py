@@ -7,8 +7,8 @@ city_hashes = {
     "Dresden": "c623c847b78dres",
     "Kamenz": "c602b847b78bba",
     "Loebau": "c6034d6a1f23aa",
-    "Pirna": "c6034d6ce8279b",
-    "Plauen": "c423c83f37ekaj"
+    "Pirna": "c6034d6ce8279b"
+    # "Plauen": "c423c83f37ekaj"
 }
 
 formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
@@ -27,6 +27,7 @@ def setup_logger(name, log_file, level=logging.INFO):
 
 if __name__ == '__main__':
     send_msg_flag = False
+    json_file = 'result.json'
 
     info_log = setup_logger("info_log", "info.log")
     result_log = setup_logger("result_log", "result.log")
@@ -38,16 +39,22 @@ if __name__ == '__main__':
         print("Status Code: " + str(response.status_code))
         exit(-1)
     json_obj = json.loads(response.content)
-    result = []
+
+    result = {}
+    data_from_file = {}
     for city, hash_ in city_hashes.items():
         amount = json_obj["response"]["data"][hash_]["counteritems"][0]["val"]
-        # send msg if any value > 0
-        if amount > 0:
-            send_msg_flag = True
-            string = "{:<12s}{:>10d}".format(city, amount)
-            result.append(string)
-            msg = city + ": " + str(amount)
-            result_log.info(msg)
+        result[city] = amount
 
-    if send_msg_flag:
-        telegram_send.send(messages=(["\n".join(result)]))
+    with open(json_file, 'r') as reader:
+        data_from_file = json.load(reader)
+
+    with open(json_file, 'w') as writer:
+        json.dump(result, writer)
+        
+    if data_from_file != result:
+        message = ""
+        for city, nr in result.items():
+            message += "{:<12s}{:>10d}\n".format(city, nr)
+
+        telegram_send.send(messages=[message])
